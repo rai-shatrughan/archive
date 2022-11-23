@@ -1,0 +1,98 @@
+plugins {
+    id 'io.vertx.vertx-plugin' version '1.3.0'
+    id 'com.google.cloud.tools.jib' version '3.2.1'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'io.vertx:vertx-web'
+    implementation 'io.vertx:vertx-kafka-client'
+    implementation 'io.vertx:vertx-cassandra-client'
+    implementation 'io.vertx:vertx-micrometer-metrics'
+    implementation 'io.vertx:vertx-opentracing'
+    implementation 'io.vertx:vertx-web-client'
+    implementation 'io.vertx:vertx-json-schema'
+    implementation 'io.vertx:vertx-junit5'
+    implementation 'io.vertx:vertx-web-openapi'
+
+    implementation 'io.micrometer:micrometer-registry-prometheus:1.5.2'
+
+    implementation 'org.apache.logging.log4j:log4j-api:2.17.2'
+    implementation 'org.apache.logging.log4j:log4j-core:2.17.2'
+    runtimeOnly 'org.apache.logging.log4j:log4j-layout-template-json:2.17.2'
+
+    implementation 'org.apache.spark:spark-core_2.13:3.3.0'
+    implementation 'org.apache.spark:spark-streaming_2.13:3.3.0'
+    implementation 'org.apache.spark:spark-streaming-kafka-0-10_2.13:3.3.0'
+    implementation 'org.apache.spark:spark-sql_2.13:3.3.0'
+
+		implementation 'org.scala-lang:scala-library:2.13.8'
+		implementation 'org.scala-lang:scala-compiler:2.13.8'
+		implementation 'org.scala-lang:scala-reflect:2.13.8'
+
+    implementation 'com.datastax.spark:spark-cassandra-connector_2.12:3.2.0'
+
+		implementation group: 'org.apache.kafka', name: 'kafka-clients', version: '2.2.0'
+
+    implementation group: 'org.apache.hbase', name: 'hbase-client', version: '2.4.5'
+    implementation group: 'org.apache.hbase', name: 'hbase', version: '2.4.5'
+
+}
+
+task perf(type: JavaExec) {
+    group = "Execution"
+    description = "Run the main class with JavaExecTask"
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'sr.me.ws.TestVerticle'
+}
+
+task stream(type: JavaExec) {
+    group = "Execution"
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'sr.me.sprk.Stream'
+}
+
+task hb(type: JavaExec) {
+    group = "Execution"
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'sr.me.handler.HbaseHandler'
+}
+
+task kc(type: JavaExec) {
+    group = "Execution"
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'sr.me.ws.CustomLauncher'
+    args = ['run', 'sr.me.ws.KCVerticle', '-DJAEGER_AGENT_HOST=172.18.0.91']
+}
+
+task iot(type: JavaExec) {
+    group = "Execution"
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'sr.me.ws.CustomLauncher'
+    args = ['run', 'sr.me.swag.IoTVerticle', '-DJAEGER_AGENT_HOST=172.18.0.91']
+}
+
+vertx {
+    vertxVersion = '4.2.7'
+    launcher = 'sr.me.ws.CustomLauncher'
+    mainVerticle = 'sr.me.ws.WSVerticle'
+    jvmArgs = ['-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory -DJAEGER_AGENT_HOST=172.18.0.91']
+}
+
+jib {
+    from {
+      image = 'eclipse-temurin:11-jre'
+    }
+    to {
+        image = 'sr-me-ws'
+        tags = ['v1']
+      }
+    container {
+      mainClass = "sr.me.ws.CustomLauncher"
+      args =['run', 'sr.me.ws.WSVerticle', '-DJAEGER_AGENT_HOST=172.18.0.91']
+      creationTime = "USE_CURRENT_TIMESTAMP"
+    }
+}
